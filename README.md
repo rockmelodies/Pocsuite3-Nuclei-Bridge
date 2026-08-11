@@ -1,63 +1,59 @@
 # Pocsuite3-Nuclei-Bridge
 
+<p align="center">
+  <a href="#chinese"><img src="https://img.shields.io/badge/中文-简体-red?style=for-the-badge" alt="中文"></a>
+  <a href="#english"><img src="https://img.shields.io/badge/English-EN-blue?style=for-the-badge" alt="English"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Pocsuite3-2.0+-blue?style=flat-square&logo=python" alt="Pocsuite3">
+  <img src="https://img.shields.io/badge/Nuclei-3.0+-green?style=flat-square" alt="Nuclei">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT">
+  <img src="https://img.shields.io/badge/Vuln_Types-10+-orange?style=flat-square" alt="Vuln Types">
+  <img src="https://img.shields.io/badge/Bidirectional-Yes-success?style=flat-square" alt="Bidirectional">
+</p>
+
 > 双格式 POC 生成器 — 一份漏洞报告，同时输出 Pocsuite3 + Nuclei 两份 POC  
 > Dual-format POC Generator — one vulnerability report, two POC outputs
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Pocsuite3-2.0+-blue?style=for-the-badge&logo=python" alt="Pocsuite3">
-  <img src="https://img.shields.io/badge/Nuclei-3.0+-green?style=for-the-badge&logo=nuclei" alt="Nuclei">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT">
-  <img src="https://img.shields.io/badge/Skill-Production_Ready-red?style=for-the-badge" alt="Production Ready">
-</p>
+---
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Vuln_Types-10+-orange?style=flat-square" alt="Vuln Types">
-  <img src="https://img.shields.io/badge/Bidirectional-Yes-success?style=flat-square" alt="Bidirectional">
-  <img src="https://img.shields.io/badge/BugCloud_Compliant-Yes-blue?style=flat-square" alt="BugCloud">
-  <img src="https://img.shields.io/badge/Updated-2026--08-informational?style=flat-square" alt="Updated">
-</p>
+## 无法访问 GitHub? / Cannot Access GitHub?
+
+```bash
+# Windows (cmd)
+set http_proxy=http://127.0.0.1:7897
+set https_proxy=http://127.0.0.1:7897
+
+# Linux / macOS / Git Bash
+export http_proxy=http://127.0.0.1:7897
+export https_proxy=http://127.0.0.1:7897
+
+# 然后正常 git clone / Then git clone normally
+git clone https://github.com/rockmelodies/Pocsuite3-Nuclei-Bridge.git
+```
 
 ---
 
-## 这是什么 / What Is This
+<h2 id="chinese">🇨🇳 中文</h2>
+
+### 这是什么
 
 从同一份漏洞报告**同时生成**两种格式的 POC：
-Generate **both** formats from a single vulnerability report:
 
-| 格式 / Format | 文件 / File | 场景 / Use Case |
+| 格式 | 文件 | 场景 |
 |:---|:---|:---|
-| **Pocsuite3** | `.py` | 360 BugCloud 提交、批量验证、深度利用 |
+| **Pocsuite3** | `.py` | 批量验证、深度利用、POC 提交 |
 | **Nuclei** | `.yaml` | 快速大规模扫描、CI/CD 集成、模板生态 |
 
-双向转换：Pocsuite3 ↔ Nuclei / Bidirectional conversion.
+双向转换：Pocsuite3 ↔ Nuclei。
 
----
-
-## 文件结构 / Project Structure
-
-```
-Pocsuite3-Nuclei-Bridge/
-├── SKILL.md          ← 完整编写规范 (Part 1: Pocsuite3 + Part 2: Nuclei + Bridge)
-├── README.md         ← 本文件 / This File
-└── LICENSE
-```
-
----
-
-## 快速开始 / Quick Start
-
-### 从漏洞报告生成 POC / Generate from Vuln Report
+### 快速开始
 
 ```
 你: "帮我给这个漏洞写 Pocsuite3 + Nuclei 双格式 POC"
-   → 输出: 符合 360 BugCloud 规范的 .py 文件
-   → 同时输出: 对应的 Nuclei .yaml 模板
-
-You: "Generate both Pocsuite3 and Nuclei POC for this CVE"
-   → Output: 360 BugCloud-compliant .py file + Nuclei .yaml template
+   → 输出: .py + .yaml 两份 POC
 ```
-
-### 快速生成常用类型 / Quick Templates
 
 | 漏洞类型 | 命令示例 |
 |---------|---------|
@@ -66,60 +62,121 @@ You: "Generate both Pocsuite3 and Nuclei POC for this CVE"
 | 未授权访问 | `"契约锁配置泄露漏洞帮我写 POC"` |
 | 文件上传 | `"文件上传 getshell 漏洞生成 POC"` |
 | SSRF | `"SSRF 漏洞写 Pocsuite3 和 Nuclei"` |
+| 格式互转 | `"把这个 Nuclei 模板转成 Pocsuite3"` |
 
-### 格式互转 / Format Conversion
+### 支持的漏洞类型
 
-```
-"把这个 Nuclei 模板转成 Pocsuite3"
-"Convert this Pocsuite3 POC to Nuclei"
-```
+| 类型 | Pocsuite3 | Nuclei |
+|:---|:---|:---:|
+| 命令执行 / RCE | `COMMAND_EXECUTION` | `critical` |
+| 文件上传 / File Upload | `FILE_UPLOAD` | `critical` |
+| 代码执行 / Code Exec | `CODE_EXECUTION` | `critical` |
+| 未授权访问 / Unauth | `UNAUTHORIZED_ACCESS` | `high` |
+| SQL 注入 / SQLi | `SQL_INJECTION` | `high` |
+| 路径遍历 / Path Traversal | `PATH_DISCLOSURE` | `high` |
+| 弱口令 / Default Creds | `WEAK_PASSWORD` | `high` |
+| 信息泄露 / Info Leak | `INFORMATION_DISCLOSURE` | `medium` |
+| SSRF | `SSRF` | `medium` |
+| XSS | `XSS` | `medium` |
 
----
+### 规范要点
 
-## 支持的漏洞类型 / Supported Vuln Types
-
-| 类型 / Type | Pocsuite3 | Nuclei Severity | POC 复杂度 |
-|:---|:---|:---:|:---:|
-| 命令执行 / RCE | `COMMAND_EXECUTION` | `critical` | 中 |
-| 文件上传 / File Upload | `FILE_UPLOAD` | `critical` | 中 |
-| 代码执行 / Code Exec | `CODE_EXECUTION` | `critical` | 高 |
-| 未授权访问 / Unauth | `UNAUTHORIZED_ACCESS` | `high` | 低 |
-| SQL 注入 / SQLi | `SQL_INJECTION` | `high` | 中 |
-| 路径遍历 / Path Traversal | `PATH_DISCLOSURE` | `high` | 低 |
-| 弱口令 / Default Creds | `WEAK_PASSWORD` | `high` | 低 |
-| 信息泄露 / Info Leak | `INFORMATION_DISCLOSURE` | `medium` | 低 |
-| SSRF | `SSRF` | `medium` | 中 |
-| XSS | `XSS` | `medium` | 低 |
-
----
-
-## 规范要点 / Key Rules
-
-| 规则 / Rule | 说明 |
+| 规则 | 说明 |
 |:---|:---|
 | 单请求验证 | `_verify()` 尽量一次请求完成 |
 | 忽略 SSL | 所有请求 `verify=False` |
-| 安全 Payload | `_verify()` 中用 `echo` / `sleep`，不做破坏性操作 |
+| 安全 Payload | `_verify()` 中用 `echo` / `sleep` |
 | ASCII 文件名 | `ProductName_CVE-YYYY-NNNN.py` |
 | 无外部依赖 | 仅用 `pocsuite3.api` 内置 API |
-| Pocsuite3 → Nuclei | 9 项自动映射（BaseURL / matchers / extractors） |
-| Nuclei → Pocsuite3 | 9 项自动映射（status / word / regex / randstr） |
+
+### 项目结构
+
+```
+Pocsuite3-Nuclei-Bridge/
+├── SKILL.md          ← Part 1: Pocsuite3 + Part 2: Nuclei + 双向桥接
+├── README.md         ← 本文件
+└── LICENSE
+```
 
 ---
 
-## 参考 / References
+<h2 id="english">🇺🇸 English</h2>
 
-| 资料 | 链接 |
+### What Is This
+
+Generate **both** POC formats from a single vulnerability report:
+
+| Format | File | Use Case |
+|:---|:---|:---|
+| **Pocsuite3** | `.py` | Batch verification, deep exploitation, POC submission |
+| **Nuclei** | `.yaml` | High-speed mass scanning, CI/CD integration, template ecosystem |
+
+Bidirectional conversion: Pocsuite3 ↔ Nuclei.
+
+### Quick Start
+
+```
+You: "Generate both Pocsuite3 and Nuclei POC for this CVE"
+   → Output: .py + .yaml dual-format POC
+```
+
+| Vuln Type | Example |
+|-----------|---------|
+| RCE | `"Write dual-format POC for CVE-2024-1234"` |
+| SQL Injection | `"Generate Pocsuite3 + Nuclei for this SQLi"` |
+| Unauthorized Access | `"Write POC for config leak vulnerability"` |
+| File Upload | `"Generate POC for file upload to RCE"` |
+| SSRF | `"Write Pocsuite3 and Nuclei for SSRF"` |
+| Format Conversion | `"Convert this Nuclei template to Pocsuite3"` |
+
+### Supported Vuln Types
+
+| Type | Pocsuite3 | Nuclei |
+|:---|:---|:---:|
+| RCE | `COMMAND_EXECUTION` | `critical` |
+| File Upload | `FILE_UPLOAD` | `critical` |
+| Code Execution | `CODE_EXECUTION` | `critical` |
+| Unauthorized Access | `UNAUTHORIZED_ACCESS` | `high` |
+| SQL Injection | `SQL_INJECTION` | `high` |
+| Path Traversal | `PATH_DISCLOSURE` | `high` |
+| Default Credentials | `WEAK_PASSWORD` | `high` |
+| Information Disclosure | `INFORMATION_DISCLOSURE` | `medium` |
+| SSRF | `SSRF` | `medium` |
+| XSS | `XSS` | `medium` |
+
+### Key Rules
+
+| Rule | Description |
+|:---|:---|
+| Single-request verify | One HTTP request whenever possible |
+| SSL always disabled | `verify=False` on all requests |
+| Safe payloads | Use `echo` / `sleep` in `_verify()` |
+| ASCII filenames | `ProductName_CVE-YYYY-NNNN.py` |
+| Zero external deps | Only `pocsuite3.api` built-ins |
+
+### Project Structure
+
+```
+Pocsuite3-Nuclei-Bridge/
+├── SKILL.md          ← Part 1: Pocsuite3 + Part 2: Nuclei + Bridge
+├── README.md         ← This file
+└── LICENSE
+```
+
+---
+
+## References
+
+| Resource | Link |
 |:---|:---|
 | Pocsuite3 | https://github.com/knownsec/pocsuite3 |
 | Nuclei | https://github.com/projectdiscovery/nuclei |
-| Nuclei 模板指南 | https://docs.projectdiscovery.io/templates/introduction |
-| 360 BugCloud 提交规范 | 内部文档 |
+| Nuclei Template Guide | https://docs.projectdiscovery.io/templates/introduction |
 
 ---
 
 <p align="center">
-  <sub>Made with <a href="https://github.com/rockmelodies">rockmelodies</a></sub>
+  <sub>Made by <a href="https://github.com/rockmelodies">rockmelodies</a></sub>
 </p>
 
 ## License
