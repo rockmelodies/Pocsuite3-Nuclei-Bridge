@@ -1,23 +1,28 @@
 ---
 name: pocsuite3-nuclei-bridge
 description: >
-  Create professional Pocsuite3 POC scripts from vulnerability reports or
-  Nuclei templates with full compliance to 360 BugCloud POC submission standards.
-  Supports COMMAND_EXECUTION, FILE_UPLOAD, UNAUTHORIZED_ACCESS, SQL_INJECTION,
-  and other vuln types. When a user provides a vulnerability report, CVE advisory,
-  or Nuclei template and asks to write a Pocsuite3 POC — load this skill first.
-  Also load when writing batch-verification scripts, converting between POC formats,
-  or preparing vulnerability submissions for review.
+  Dual-format POC generator — creates both Pocsuite3 Python POC scripts and
+  Nuclei YAML templates from a single vulnerability report. Full compliance
+  with 360 BugCloud POC submission standards and Nuclei template best practices.
+  When a user provides a vulnerability report, CVE advisory, or asks to write
+  a POC — load this skill first. Supports all common vuln types: RCE, file
+  upload, SQL injection, SSRF, unauth access, file read, XSS, and more.
+  Also load when: converting between POC formats, preparing submissions for
+  BugCloud review, or writing batch-verification scripts.
 ---
 
-# Pocsuite3-Nuclei-Bridge — Professional POC Authoring
+# Pocsuite3-Nuclei-Bridge — Dual-Format POC Generator
 
 ## Overview
 
-This skill governs the authoring of production-grade Pocsuite3 POC scripts aligned
-with the 360 BugCloud submission specification. It covers the complete POC
-lifecycle: structure, metadata, verification logic, attack modules, fingerprinting,
-and output formatting.
+This skill generates **both** formats from a single vulnerability specification:
+
+| Format | File | Use Case |
+|--------|------|---------|
+| **Pocsuite3** | `.py` | 360 BugCloud submission, batch verification, deep exploit |
+| **Nuclei** | `.yaml` | Fast mass scanning, CI/CD integration, template ecosystem |
+
+The bridge is bidirectional — given either format, generate the other. Given a raw vulnerability report, generate both simultaneously.
 
 ## Guiding Principles
 
@@ -334,6 +339,240 @@ Required companion files for submission:
 
 ---
 
+## Part 2: Nuclei Template Generation
+
+### Nuclei Template Skeleton
+
+```yaml
+id: vendor-product-vulntype
+
+info:
+  name: Vendor Product Component - Vulnerability Type
+  author: your-name
+  severity: critical|high|medium|low|info
+  description: |
+    Detailed description (2-3 sentences).
+    Include impact and affected versions.
+  reference:
+    - https://nvd.nist.gov/vuln/detail/CVE-XXXX-XXXXX
+  classification:
+    cve-id: CVE-XXXX-XXXXX
+    cwe-id: CWE-xxx
+  tags: tag1,tag2,tag3
+
+http:
+  - method: POST
+    path:
+      - "{{BaseURL}}/vulnerable/path"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "param=payload"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "expected_response_signature"
+        part: body
+
+    extractors:
+      - type: regex
+        name: extracted_data
+        part: body
+        regex:
+          - 'pattern(.*)'
+```
+
+### Nuclei Severity Mapping
+
+| CVSS | Nuclei severity | When to use |
+|------|:---:|------|
+| 9.0–10.0 | `critical` | RCE, auth bypass, full system compromise |
+| 7.0–8.9 | `high` | SQLi, file read, sensitive info disclosure |
+| 4.0–6.9 | `medium` | SSRF, XSS, directory listing |
+| 0.1–3.9 | `low` | Minor info leak, fingerprinting |
+| — | `info` | Fingerprinting only, no direct impact |
+
+### Common Matcher Types
+
+| Type | Use Case | Example |
+|------|---------|---------|
+| `status` | Check HTTP response code | `status: [200]` |
+| `word` | Check for string in response | `words: ["root:"]` |
+| `regex` | Pattern match in response | `regex: ["admin:[^:]+:"]` |
+| `dsl` | Dynamic expression evaluation | `dsl: ["len(body)>1000"]` |
+| `time` | Response time threshold (blind RCE) | `duration: [">5000"]` |
+
+### Vuln-Type-to-Nuclei Patterns
+
+| Vulnerability | Method | Path | Matcher |
+|-------------|--------|------|---------|
+| RCE (blind, sleep) | POST | `/vuln` | `type: time, duration: [">5000"]` via `sleep 5` |
+| RCE (blind, echo) | POST | `/vuln` | `type: word, words: ["{{randstr}}"]` |
+| RCE (visible) | GET | `/vuln?cmd=id` | `type: word, words: ["uid="]` |
+| File Upload | PUT/POST | `/upload` | `type: dsl, dsl: ["status_code==200 && contains(body,'uploaded')"]` |
+| File Read | GET | `/download?file=../../etc/passwd` | `type: word, words: ["root:x:0:"]` |
+| SQLi (error) | GET | `/page?id=1'` | `type: word, words: ["SQL syntax"]` |
+| SQLi (blind, time) | GET | `/page?id=1 AND SLEEP(5)` | `type: time, duration: [">5000"]` |
+| Unauthorized Access | GET | `/admin/config` | `type: word, words: ["password","secret"]` |
+| SSRF | POST | `/proxy` | `type: word, words: ["Interactsh"]` via `{{interactsh-url}}` |
+| XSS | GET | `/search?q=<script>` | `type: word, words: ["<script>alert"]` |
+
+### Flow Template (Multi-Step Attack)
+
+For vulnerabilities requiring multiple sequential requests:
+
+```yaml
+http:
+  - method: POST
+    path: ["{{BaseURL}}/login"]
+    body: "username=admin&password=admin"
+    # req-1: authenticate
+    matchers:
+      - type: status
+        status: [302]
+
+  - method: GET
+    path: ["{{BaseURL}}/admin/secret"]
+    # req-2: access protected resource with session from req-1
+    matchers:
+      - type: word
+        words: ["secret_data"]
+```
+
+### Variable Generation (randstr, interactsh)
+
+```yaml
+# --- Random string marker (blind RCE) ---
+variables:
+  marker: "{{rand_base(12)}}"
+
+# In matcher:
+  matchers:
+    - type: word
+      words: ["{{marker}}"]
+
+# --- Interactsh (OOB / SSRF / blind RCE) ---
+  matchers:
+    - type: word
+      part: interactsh_protocol
+      words: ["dns", "http"]
+```
+
+### Template for Each Common Vuln Type
+
+**RCE (blind — time-based)**:
+```yaml
+http:
+  - method: POST
+    path: ["{{BaseURL}}/rce"]
+    body: "cmd=sleep+5"
+    matchers:
+      - type: time
+        duration: [">4000", "<10000"]
+```
+
+**RCE (blind — echo marker)**:
+```yaml
+http:
+  - method: POST
+    path: ["{{BaseURL}}/rce"]
+    body: "cmd=echo+{{marker}}"
+    matchers:
+      - type: word
+        words: ["{{marker}}"]
+```
+
+**File Upload to RCE**:
+```yaml
+http:
+  # Step 1: Upload
+  - method: PUT
+    path: ["{{BaseURL}}/upload/test.txt"]
+    body: "pwned_by_nuclei"
+    matchers:
+      - type: status
+        status: [200, 201]
+
+  # Step 2: Verify file accessible
+  - method: GET
+    path: ["{{BaseURL}}/uploads/test.txt"]
+    matchers:
+      - type: word
+        words: ["pwned_by_nuclei"]
+```
+
+**SQL Injection (error-based)**:
+```yaml
+http:
+  - method: GET
+    path: ["{{BaseURL}}/product?id=1'"]
+    matchers:
+      - type: word
+        words:
+          - "SQL syntax"
+          - "mysql_fetch"
+          - "ORA-01756"
+        condition: or
+```
+
+**Unauthorized Access (config leak)**:
+```yaml
+http:
+  - method: GET
+    path: ["{{BaseURL}}/sys/config/oss"]
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["PASSWORD_CONFIG", "SIGN_WAYS"]
+    extractors:
+      - type: json
+        name: config
+        json:
+          - ".result[]"
+```
+
+---
+
+## Bridge: Converting Between Formats
+
+### Pocsuite3 -> Nuclei (Key Mappings)
+
+| Pocsuite3 | Nuclei |
+|-----------|--------|
+| `self.url` / `target` | `{{BaseURL}}` |
+| `requests.get/post()` | `http:` block |
+| `resp.status_code` | `matchers: type: status` |
+| `"signature" in resp.text` | `matchers: type: word, words:` |
+| `resp.text` regex extraction | `extractors: type: regex` |
+| `random_str(12)` | `{{rand_base(12)}}` |
+| `sleep(5)` time delta | `matchers: type: time, duration:` |
+| `VUL_TYPE.COMMAND_EXECUTION` | `severity: critical` |
+| `POC_CATEGORY.EXPLOITS.WEBAPP` | `http:` block |
+
+### Nuclei -> Pocsuite3 (Key Mappings)
+
+| Nuclei | Pocsuite3 |
+|--------|-----------|
+| `{{BaseURL}}` | `self.url` |
+| `id:` | `vulID` |
+| `info.name` | `name` |
+| `info.author` | `author` |
+| `info.severity` | map to `VUL_TYPE` |
+| `http:` block with `method: GET/POST` | `requests.get/post()` |
+| `matchers: type: status` | `resp.status_code` check |
+| `matchers: type: word` | `"word" in resp.text` |
+| `{{randstr}}` | `random_str()` |
+| `{{interactsh-url}}` | DNS/http log callback |
+
+---
+
 > **Reference**: 360 BugCloud POC Submission Specification v2.0  
 > **Pocsuite3**: https://github.com/knownsec/pocsuite3  
-> **Nuclei**: https://github.com/projectdiscovery/nuclei
+> **Nuclei**: https://github.com/projectdiscovery/nuclei  
+> **Nuclei Template Guide**: https://docs.projectdiscovery.io/templates/introduction
